@@ -38,9 +38,12 @@ model Note {
 }
 
 model Attachment {
-  id       String @id @default(cuid())
-  fileName String
-  filePath String
-  noteId   String
-  note     Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  fileName   String
+  storedName String
+  mimeType   String
+  size       Int
+  noteId     String
+  createdAt  DateTime @default(now())
+  note       Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 }

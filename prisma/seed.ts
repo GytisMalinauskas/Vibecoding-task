@@ -39,7 +39,9 @@ async function main() {
             attachments: {
               create: {
                 fileName: "brake-inspection.pdf",
-                filePath: "uploads/brake-inspection.pdf",
+                storedName: "brake-inspection.pdf",
+                mimeType: "application/pdf",
+                size: 0,
               },
             },
           },
