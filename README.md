@@ -1,5 +1,7 @@
 # Vibecoding-task
 
+`CHATGPT` was used to generate prompts, `Copilot` was used for vibecoding tasks.
+
 ### Stack
 + Next.js
 + TypeScript
@@ -63,3 +65,11 @@ customer-notes/
 ```
 
 ### How to Run
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run dev
+```
+
+Open http://localhost:3000.
