@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { NextResponse } from "next/server";
@@ -34,6 +34,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const storedPaths: string[] = [];
+  const attachmentIds: string[] = [];
+
   try {
     const note = await prisma.note.findUnique({
       where: { id: noteId },
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
       const filePath = path.join(uploadsDirectory, storedName);
 
       await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+      storedPaths.push(filePath);
 
       const attachment = await prisma.attachment.create({
         data: {
@@ -69,11 +73,32 @@ export async function POST(request: Request) {
       });
 
       attachments.push(attachment);
+      attachmentIds.push(attachment.id);
     }
 
     return NextResponse.json(attachments, { status: 201 });
   } catch (error) {
     console.error(`Failed to upload attachments for note ${noteId}:`, error);
+
+    if (attachmentIds.length > 0) {
+      try {
+        await prisma.attachment.deleteMany({
+          where: { id: { in: attachmentIds } },
+        });
+      } catch (cleanupError) {
+        console.error("Failed to clean up attachment records:", cleanupError);
+      }
+    }
+
+    for (const filePath of storedPaths) {
+      try {
+        await unlink(filePath);
+      } catch (cleanupError) {
+        if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.error(`Failed to clean up uploaded file ${filePath}:`, cleanupError);
+        }
+      }
+    }
 
     return NextResponse.json(
       { error: "Failed to upload attachments" },
