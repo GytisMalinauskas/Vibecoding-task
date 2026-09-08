@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Attachment = {
   id: string;
@@ -41,6 +41,12 @@ export default function CustomerDetailsPage({
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteAuthor, setNoteAuthor] = useState("");
+  const [noteCategory, setNoteCategory] = useState("General");
+  const [noteImportance, setNoteImportance] = useState(false);
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [noteFormError, setNoteFormError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCustomer() {
@@ -64,6 +70,77 @@ export default function CustomerDetailsPage({
 
     void loadCustomer();
   }, [params]);
+
+  async function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const text = noteText.trim();
+    const author = noteAuthor.trim();
+
+    if (!text) {
+      setNoteFormError("Note text is required.");
+      return;
+    }
+
+    if (text.length > 500) {
+      setNoteFormError("Note text must not exceed 500 characters.");
+      return;
+    }
+
+    if (!author) {
+      setNoteFormError("Author is required.");
+      return;
+    }
+
+    if (!customer) {
+      return;
+    }
+
+    setIsSubmittingNote(true);
+    setNoteFormError(null);
+
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: customer.id,
+          text,
+          author,
+          category: noteCategory,
+          importance: noteImportance,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to create note.");
+      }
+
+      setCustomer((currentCustomer) =>
+        currentCustomer
+          ? {
+              ...currentCustomer,
+              notes: [{ ...result, attachments: [] }, ...currentCustomer.notes],
+            }
+          : currentCustomer,
+      );
+      setNoteText("");
+      setNoteAuthor("");
+      setNoteCategory("General");
+      setNoteImportance(false);
+    } catch (requestError) {
+      console.error("Failed to create note:", requestError);
+      setNoteFormError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to create note. Please try again.",
+      );
+    } finally {
+      setIsSubmittingNote(false);
+    }
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-12">
@@ -119,6 +196,71 @@ export default function CustomerDetailsPage({
 
           <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+            <form className="mt-4 space-y-4 border-b border-slate-100 pb-6" onSubmit={handleNoteSubmit}>
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="note-text">
+                  Note
+                </label>
+                <textarea
+                  className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                  id="note-text"
+                  maxLength={500}
+                  onChange={(event) => setNoteText(event.target.value)}
+                  placeholder="Write a note..."
+                  value={noteText}
+                />
+                <p className="mt-1 text-right text-xs text-slate-500">{noteText.length}/500</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor="note-author">
+                    Author
+                  </label>
+                  <input
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    id="note-author"
+                    onChange={(event) => setNoteAuthor(event.target.value)}
+                    value={noteAuthor}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor="note-category">
+                    Category
+                  </label>
+                  <select
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    id="note-category"
+                    onChange={(event) => setNoteCategory(event.target.value)}
+                    value={noteCategory}
+                  >
+                    <option>General</option>
+                    <option>Repair</option>
+                    <option>Payment</option>
+                    <option>Complaint</option>
+                  </select>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  checked={noteImportance}
+                  onChange={(event) => setNoteImportance(event.target.checked)}
+                  type="checkbox"
+                />
+                Important note
+              </label>
+              {noteFormError && (
+                <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                  {noteFormError}
+                </p>
+              )}
+              <button
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isSubmittingNote}
+                type="submit"
+              >
+                {isSubmittingNote ? "Saving..." : "Add note"}
+              </button>
+            </form>
             {customer.notes.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">No notes recorded.</p>
             ) : (
