@@ -45,8 +45,11 @@ export default function CustomerDetailsPage({
   const [noteAuthor, setNoteAuthor] = useState("");
   const [noteCategory, setNoteCategory] = useState("General");
   const [noteImportance, setNoteImportance] = useState(false);
+  const [noteFiles, setNoteFiles] = useState<File[]>([]);
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteFormError, setNoteFormError] = useState<string | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [noteDeleteError, setNoteDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCustomer() {
@@ -118,18 +121,53 @@ export default function CustomerDetailsPage({
         throw new Error(result.error ?? "Unable to create note.");
       }
 
+      const createdNote = { ...result, attachments: [] };
+
       setCustomer((currentCustomer) =>
         currentCustomer
           ? {
               ...currentCustomer,
-              notes: [{ ...result, attachments: [] }, ...currentCustomer.notes],
+              notes: [createdNote, ...currentCustomer.notes],
             }
           : currentCustomer,
       );
+
+      if (noteFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("noteId", result.id);
+        noteFiles.forEach((file) => formData.append("files", file));
+
+        const uploadResponse = await fetch("/api/attachments", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadResult = await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            uploadResult.error ?? "Note created, but attachments could not be uploaded.",
+          );
+        }
+
+        setCustomer((currentCustomer) =>
+          currentCustomer
+            ? {
+                ...currentCustomer,
+                notes: currentCustomer.notes.map((note) =>
+                  note.id === result.id
+                    ? { ...note, attachments: uploadResult }
+                    : note,
+                ),
+              }
+            : currentCustomer,
+        );
+      }
+
       setNoteText("");
       setNoteAuthor("");
       setNoteCategory("General");
       setNoteImportance(false);
+      setNoteFiles([]);
     } catch (requestError) {
       console.error("Failed to create note:", requestError);
       setNoteFormError(
@@ -139,6 +177,44 @@ export default function CustomerDetailsPage({
       );
     } finally {
       setIsSubmittingNote(false);
+    }
+  }
+
+  async function handleNoteDelete(noteId: string) {
+    if (!window.confirm("Are you sure you want to delete this note?")) {
+      return;
+    }
+
+    setDeletingNoteId(noteId);
+    setNoteDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to delete note.");
+      }
+
+      setCustomer((currentCustomer) =>
+        currentCustomer
+          ? {
+              ...currentCustomer,
+              notes: currentCustomer.notes.filter((note) => note.id !== noteId),
+            }
+          : currentCustomer,
+      );
+    } catch (requestError) {
+      console.error("Failed to delete note:", requestError);
+      setNoteDeleteError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to delete note. Please try again.",
+      );
+    } finally {
+      setDeletingNoteId(null);
     }
   }
 
@@ -248,6 +324,25 @@ export default function CustomerDetailsPage({
                 />
                 Important note
               </label>
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="note-files">
+                  Attachments
+                </label>
+                <input
+                  className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                  id="note-files"
+                  multiple
+                  onChange={(event) =>
+                    setNoteFiles(Array.from(event.target.files ?? []))
+                  }
+                  type="file"
+                />
+                {noteFiles.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {noteFiles.length} file{noteFiles.length === 1 ? "" : "s"} selected
+                  </p>
+                )}
+              </div>
               {noteFormError && (
                 <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
                   {noteFormError}
@@ -258,9 +353,18 @@ export default function CustomerDetailsPage({
                 disabled={isSubmittingNote}
                 type="submit"
               >
-                {isSubmittingNote ? "Saving..." : "Add note"}
+                {isSubmittingNote
+                  ? noteFiles.length > 0
+                    ? "Saving and uploading..."
+                    : "Saving..."
+                  : "Add note"}
               </button>
             </form>
+            {noteDeleteError && (
+              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                {noteDeleteError}
+              </p>
+            )}
             {customer.notes.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">No notes recorded.</p>
             ) : (
@@ -276,6 +380,14 @@ export default function CustomerDetailsPage({
                           Important
                         </span>
                       )}
+                      <button
+                        className="ml-auto rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={deletingNoteId !== null}
+                        onClick={() => void handleNoteDelete(note.id)}
+                        type="button"
+                      >
+                        {deletingNoteId === note.id ? "Deleting..." : "Delete"}
+                      </button>
                     </div>
                     <div className="mt-3 text-sm leading-6 text-slate-700">
                       <ReactMarkdown
@@ -306,6 +418,20 @@ export default function CustomerDetailsPage({
                         {note.text}
                       </ReactMarkdown>
                     </div>
+                    {note.attachments.length > 0 && (
+                      <ul className="mt-3 space-y-1 text-sm">
+                        {note.attachments.map((attachment) => (
+                          <li key={attachment.id}>
+                            <a
+                              className="text-slate-700 underline hover:text-slate-900"
+                              href={`/api/attachments/${attachment.id}`}
+                            >
+                              {attachment.fileName}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
