@@ -46,6 +46,7 @@ export default function CustomerDetailsPage({
   const [noteCategory, setNoteCategory] = useState("General");
   const [noteImportance, setNoteImportance] = useState(false);
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
+  const [isNoteFormOpen, setIsNoteFormOpen] = useState(false);
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteFormError, setNoteFormError] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
@@ -219,9 +220,9 @@ export default function CustomerDetailsPage({
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-12">
+    <main className="mx-auto min-h-screen max-w-4xl px-4 py-8 sm:px-6">
       <Link
-        className="text-sm font-medium text-slate-600 hover:text-slate-900"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
         href="/customers"
       >
         &larr; Back to customers
@@ -241,147 +242,201 @@ export default function CustomerDetailsPage({
 
       {!isLoading && !error && customer && (
         <>
-          <header className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Customer</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+          <header className="mt-6 border-b border-slate-200 pb-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Customer profile
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
               {customer.name}
             </h1>
-            <div className="mt-4 space-y-1 text-sm text-slate-600">
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
               {customer.email && <p>{customer.email}</p>}
               {customer.phone && <p>{customer.phone}</p>}
             </div>
           </header>
 
-          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Vehicles</h2>
+          <section className="mt-6 border-b border-slate-200 pb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Vehicles
+              </h2>
+              <span className="text-xs text-slate-400">
+                {customer.vehicles.length} recorded
+              </span>
+            </div>
             {customer.vehicles.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No vehicles recorded.</p>
+              <p className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
+                No vehicles recorded.
+              </p>
             ) : (
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                 {customer.vehicles.map((vehicle) => (
-                  <li key={vehicle.id}>
-                    <span className="font-medium text-slate-900">
+                  <li className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" key={vehicle.id}>
+                    <p className="font-mono text-sm font-semibold tracking-wide text-slate-950">
                       {vehicle.registrationNumber}
-                    </span>{" "}
-                    &middot; {vehicle.make} {vehicle.model}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {vehicle.make} {vehicle.model}
+                    </p>
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
-            <form className="mt-4 space-y-4 border-b border-slate-100 pb-6" onSubmit={handleNoteSubmit}>
+          <section className="mt-6">
+            <div className="flex items-end justify-between gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="note-text">
-                  Note
-                </label>
-                <textarea
-                  className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                  id="note-text"
-                  maxLength={500}
-                  onChange={(event) => setNoteText(event.target.value)}
-                  placeholder="Write a note..."
-                  value={noteText}
-                />
-                <p className="mt-1 text-right text-xs text-slate-500">{noteText.length}/500</p>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor="note-author">
-                    Author
-                  </label>
-                  <input
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                    id="note-author"
-                    onChange={(event) => setNoteAuthor(event.target.value)}
-                    value={noteAuthor}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor="note-category">
-                    Category
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                    id="note-category"
-                    onChange={(event) => setNoteCategory(event.target.value)}
-                    value={noteCategory}
-                  >
-                    <option>General</option>
-                    <option>Repair</option>
-                    <option>Payment</option>
-                    <option>Complaint</option>
-                  </select>
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  checked={noteImportance}
-                  onChange={(event) => setNoteImportance(event.target.checked)}
-                  type="checkbox"
-                />
-                Important note
-              </label>
-              <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="note-files">
-                  Attachments
-                </label>
-                <input
-                  className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                  id="note-files"
-                  multiple
-                  onChange={(event) =>
-                    setNoteFiles(Array.from(event.target.files ?? []))
-                  }
-                  type="file"
-                />
-                {noteFiles.length > 0 && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    {noteFiles.length} file{noteFiles.length === 1 ? "" : "s"} selected
-                  </p>
-                )}
-              </div>
-              {noteFormError && (
-                <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-                  {noteFormError}
+                <h2 className="text-xl font-semibold text-slate-950">Internal notes</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Service history and customer updates
                 </p>
-              )}
-              <button
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isSubmittingNote}
-                type="submit"
-              >
-                {isSubmittingNote
-                  ? noteFiles.length > 0
-                    ? "Saving and uploading..."
-                    : "Saving..."
-                  : "Add note"}
-              </button>
-            </form>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-400">{customer.notes.length}</span>
+                <button
+                  className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                  onClick={() => setIsNoteFormOpen((isOpen) => !isOpen)}
+                  type="button"
+                >
+                  {isNoteFormOpen ? "Close form" : "Add note"}
+                </button>
+              </div>
+            </div>
             {noteDeleteError && (
-              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+              <p className="mt-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
                 {noteDeleteError}
               </p>
             )}
+            {isNoteFormOpen && (
+              <form className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" onSubmit={handleNoteSubmit}>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800" htmlFor="note-text">
+                    Note
+                  </label>
+                  <textarea
+                    className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200"
+                    id="note-text"
+                    maxLength={500}
+                    onChange={(event) => setNoteText(event.target.value)}
+                    placeholder="Write a note..."
+                    value={noteText}
+                  />
+                  <p className="mt-1 text-right text-xs text-slate-500">{noteText.length}/500</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700" htmlFor="note-author">
+                      Author
+                    </label>
+                    <input
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200"
+                      id="note-author"
+                      onChange={(event) => setNoteAuthor(event.target.value)}
+                      value={noteAuthor}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700" htmlFor="note-category">
+                      Category
+                    </label>
+                    <select
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200"
+                      id="note-category"
+                      onChange={(event) => setNoteCategory(event.target.value)}
+                      value={noteCategory}
+                    >
+                      <option>General</option>
+                      <option>Repair</option>
+                      <option>Payment</option>
+                      <option>Complaint</option>
+                    </select>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    checked={noteImportance}
+                    onChange={(event) => setNoteImportance(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Important note
+                </label>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800" htmlFor="note-files">
+                    Attachments
+                  </label>
+                  <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3">
+                    <input
+                      className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
+                      id="note-files"
+                      multiple
+                      onChange={(event) =>
+                        setNoteFiles(Array.from(event.target.files ?? []))
+                      }
+                      type="file"
+                    />
+                  </div>
+                  {noteFiles.length > 0 && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {noteFiles.length} file{noteFiles.length === 1 ? "" : "s"} selected
+                    </p>
+                  )}
+                </div>
+                {noteFormError && (
+                  <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                    {noteFormError}
+                  </p>
+                )}
+                <button
+                  className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isSubmittingNote}
+                  type="submit"
+                >
+                  {isSubmittingNote
+                    ? noteFiles.length > 0
+                      ? "Saving and uploading..."
+                      : "Saving..."
+                    : "Add note"}
+                </button>
+                <button
+                  className="ml-3 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+                  onClick={() => setIsNoteFormOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
             {customer.notes.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No notes recorded.</p>
+              <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center shadow-sm">
+                <p className="text-sm font-medium text-slate-700">No notes recorded</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Add the first service update using the button above.
+                </p>
+              </div>
             ) : (
-              <ul className="mt-4 divide-y divide-slate-100">
+              <ul className="mt-4 space-y-3">
                 {customer.notes.map((note) => (
-                  <li className="py-5 first:pt-0 last:pb-0" key={note.id}>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                      <span className="font-medium text-slate-900">{note.author}</span>
-                      <span>&middot;</span>
-                      <span>{note.category}</span>
+                  <li className={`relative rounded-xl border bg-white p-5 shadow-sm ${
+                    note.importance
+                      ? "border-amber-300 border-l-4"
+                      : "border-slate-200"
+                  }`} key={note.id}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="font-semibold text-slate-900">{note.author}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-600">
+                        {note.category}
+                      </span>
+                      <time dateTime={note.createdAt}>
+                        {new Date(note.createdAt).toLocaleDateString()}
+                      </time>
                       {note.importance && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
                           Important
                         </span>
                       )}
                       <button
-                        className="ml-auto rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={deletingNoteId !== null}
                         onClick={() => void handleNoteDelete(note.id)}
                         type="button"
@@ -389,7 +444,7 @@ export default function CustomerDetailsPage({
                         {deletingNoteId === note.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
-                    <div className="mt-3 text-sm leading-6 text-slate-700">
+                    <div className="mt-4 text-sm leading-6 text-slate-700">
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -406,7 +461,7 @@ export default function CustomerDetailsPage({
                           a: ({ children, ...props }) => (
                             <a
                               {...props}
-                              className="text-slate-700 underline hover:text-slate-900"
+                              className="text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950"
                               rel="noreferrer"
                               target="_blank"
                             >
@@ -419,11 +474,11 @@ export default function CustomerDetailsPage({
                       </ReactMarkdown>
                     </div>
                     {note.attachments.length > 0 && (
-                      <ul className="mt-3 space-y-1 text-sm">
+                      <ul className="mt-4 flex flex-wrap gap-2 text-sm">
                         {note.attachments.map((attachment) => (
                           <li key={attachment.id}>
                             <a
-                              className="text-slate-700 underline hover:text-slate-900"
+                              className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                               href={`/api/attachments/${attachment.id}`}
                             >
                               {attachment.fileName}
