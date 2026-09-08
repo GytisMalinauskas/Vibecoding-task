@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Customer {
+  id       String    @id @default(cuid())
+  name     String
+  email    String?
+  phone    String?
+  vehicles Vehicle[]
+  notes    Note[]
+}
+
+model Vehicle {
+  id                 String   @id @default(cuid())
+  registrationNumber String
+  make               String
+  model              String
+  customerId         String
+  customer           Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id          String       @id @default(cuid())
+  text        String
+  author      String
+  // Allowed values: General, Repair, Payment, Complaint
+  category    String
+  importance  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  customerId  String
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  fileName String
+  filePath String
+  noteId   String
+  note     Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
